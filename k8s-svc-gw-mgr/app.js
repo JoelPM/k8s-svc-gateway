@@ -8,6 +8,8 @@ var http    = require('http');
 var path    = require('path');
 var program = require('commander');
 
+var PATH_PREFIX = "path";
+var HOST_PREFIX = "host";
 
 program
   .version('1.0.0')
@@ -71,7 +73,10 @@ function validate( ports, port ) {
 
 function genConfig(config) {
   var serviceList = JSON.parse(config);
-  var proxyList = [];
+
+  var pathProxies = [];
+  var hostProxies = [];
+
   serviceList.items.forEach( function( item ) {
     if ( item.metadata && item.metadata.annotations ) {
       Object.keys( item.metadata.annotations ).forEach( function( key ) {
@@ -79,11 +84,21 @@ function genConfig(config) {
           var svc = item.metadata.name;
           var ip = item.spec.portalIP;
           var port = key.slice(prefix.length);
-          var rule = item.metadata.annotations[key];
-          
+          var r = item.metadata.annotations[key];
+          var type = r.slice(0, r.indexOf(":"));
+          var rule = r.slice(r.indexOf(":")+1);
+
+
           var v = validate( item.spec.ports, port );
           if (v.valid) {
-            proxyList.push( { 'service': svc, 'rule': rule, 'ip': ip, 'port': port } );
+            var def = { 'service': svc, 'rule': rule, 'ip': ip, 'port': port };
+            if ( type == PATH_RULE ) {
+              pathProxies.push( def );
+            } else if ( type == HOST_RULE ) {
+              hostProxies.push( def );
+            } else {
+              console.error('Invalid rule type (%s) when defining service %s and port %s', type, svc, port); 
+            }
           } else {
             console.error('Error defining proxy for service %s and port %s: %s', svc, port, v.error);
           } 
@@ -91,9 +106,13 @@ function genConfig(config) {
       });
     } 
   });
-  proxyList.push( { 'service': 'svc_gw', 'rule': '/svc_gw/', 'ip': 'localhost', 'port': mgr_port } );
-  proxyList.sort(svc_cmp);
-  return conf_tmpl.render({ 'proxies': proxyList });
+
+  pathProxies.push( { 'service': 'svc_gw', 'rule': '/svc_gw/', 'ip': 'localhost', 'port': mgr_port } );
+
+  pathProxies.sort(svc_cmp);
+  hostProxies.sort(svc_cmp);
+
+  return conf_tmpl.render({ 'path_proxies': pathProxies, 'host_proxies': hostProxies });
 }
 
 
