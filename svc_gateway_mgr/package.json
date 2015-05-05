@@ -1,0 +1,16 @@
+{
+  "name": "svc_gateway_mgr",
+  "version": "1.0.0",
+  "description": "A small app to build configuration for SvcProxy",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Joel Meyer <joel.meyer@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^2.8.1",
+    "express": "^4.12.3",
+    "hogan.js": "^3.0.2"
+  }
+}
