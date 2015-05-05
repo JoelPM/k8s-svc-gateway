@@ -13,14 +13,13 @@ RUN mkdir /etc/service/nginx
 COPY nginx.sh /etc/service/nginx/run
 
 # Add the manager nodejs app
-RUN mkdir /opt/svc_gateway_mgr/
-COPY svc_gateway_mgr /opt/svc_gateway_mgr/
-RUN cd /opt/svc_gateway_mgr && npm install
+RUN mkdir /opt/k8s-svc-gw-mgr/
+COPY k8s-svc-gw-mgr /opt/k8s-svc-gw-mgr/
+RUN cd /opt/k8s-svc-gw-mgr && npm install
 
 # Add the runit script for the mgr app
-RUN mkdir /etc/service/svc_gateway_mgr
-COPY svc_gateway_mgr.sh /etc/service/svc_gateway_mgr/run
-
+RUN mkdir /etc/service/k8s-svc-gw-mgr
+COPY k8s-svc-gw-mgr.sh /etc/service/k8s-svc-gw-mgr/run
 
 EXPOSE 80 443
 

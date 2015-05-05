@@ -1,6 +1,6 @@
 {
-  "name": "svc_gateway_mgr",
-  "version": "1.0.0",
+  "name": "svc-gateway-mgr",
+  "version": "0.0.0",
   "description": "A small app to build configuration for SvcProxy",
   "main": "app.js",
   "scripts": {
