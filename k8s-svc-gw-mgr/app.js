@@ -8,8 +8,8 @@ var http    = require('http');
 var path    = require('path');
 var program = require('commander');
 
-var PATH_PREFIX = "path";
-var HOST_PREFIX = "host";
+var PATH_RULE = "path";
+var HOST_RULE = "host";
 
 program
   .version('1.0.0')
