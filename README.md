@@ -1,4 +1,4 @@
-# k8s-svc-gateway
+# k8s-svc-gw
 A kubernetes service gateway docker container.
 
 
@@ -10,12 +10,12 @@ I'm sure there are _much_ better (and secure) ways of achieving this. For now it
    "kind":"Service",
    "apiVersion":"v1beta3",
    "metadata":{
-      "name":"some-fe",
+      "name":"front-end",
       "labels":{
-         "name":"some-fe"
+         "name":"front-end"
       },
       "annotations": {
-        "svcgateway.80": "/some-fe/"
+        "svcgateway.80": "host:fe.example.com"
       }
    },
    "spec":{
@@ -27,22 +27,35 @@ I'm sure there are _much_ better (and secure) ways of achieving this. For now it
         }
       ],
       "selector":{
-         "name":"some-fe"
+         "name":"front-end"
       }
    }
 }
 ```
 
-Would result in the following nginx rule being created:
+Would result in the following nginx server being created:
 
 ```
-    # some-fe proxy
-    location /oxid/ {
+server {
+    listen       80;
+    server_name  fe.example.com;
+
+    # front-end proxy
+    location / {
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
-      proxy_pass http://10.171.242.247:80/;
+      proxy_pass http://{{ip}}:{{port}}/;
     }
+
+    # redirect server error pages to the static page /50x.html
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
 ```
+
+Alternatively, path based proxies can be created as well by prefixing the value of the annotation with the string "path:" and then the rule to be applied.
 
 The service gateway checks for updates every minute, though that's configurable through env vars, as are several other things:
 
@@ -60,28 +73,28 @@ To deploy this (only just barely tested in GKE), you would use a ReplicationCont
    "kind":"ReplicationController",
    "apiVersion":"v1beta3",
    "metadata":{
-      "name":"svc-gw",
+      "name":"k8s-svc-gw",
       "labels":{
-         "name":"svc-gw",
+         "name":"k8s-svc-gw",
          "version": "0.0.0"
       }
    },
    "spec":{
       "replicas":3,
       "selector":{
-         "name":"svc-gw"
+         "name":"k8s-svc-gw"
       },
       "template":{
          "metadata":{
             "labels":{
-               "name":"svc-gw"
+               "name":"k8s-svc-gw"
             }
          },
          "spec":{
             "containers":[
                {
-                  "name":"svc-gw",
-                  "image":"joelpm/k8s-svc-gateway:0.0.0",
+                  "name":"k8s-svc-gw",
+                  "image":"joelpm/k8s-svc-gw:0.0.0",
                   "ports":[
                      {
                         "containerPort": 80,
@@ -103,9 +116,9 @@ And a service definition like:
    "kind":"Service",
    "apiVersion":"v1beta3",
    "metadata":{
-      "name":"svc-gw",
+      "name":"k8s-svc-gw",
       "labels":{
-         "name":"svc-gw"
+         "name":"k8s-svc-gw"
       }
    },
    "spec":{
@@ -117,7 +130,7 @@ And a service definition like:
         }
       ],
       "selector":{
-         "name":"svc-gw"
+         "name":"k8s-svc-gw"
       },
       "createExternalLoadBalancer": true
    }
