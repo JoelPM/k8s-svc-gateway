@@ -152,7 +152,7 @@ function update() {
     if (response.statusCode != 200) {
       last_update_ts = new Date();
       last_update_res = "Error making request to " + url + ": " + response.statusCode;
-      console.error("Error making request to %s: %s", URL, response.statusCode);
+      console.error("Error making request to %s: %s", url, response.statusCode);
       last_update_cfg = "";
     } else {
       var body = '';
