@@ -82,7 +82,7 @@ function genConfig(config) {
       Object.keys( item.metadata.annotations ).forEach( function( key ) {
         if ( key.slice(0, prefix.length) === prefix ) {
           var svc = item.metadata.name;
-          var ip = item.spec.portalIP;
+          var ip = item.spec.clusterIP;
           var port = key.slice(prefix.length);
           var r = item.metadata.annotations[key];
           var type = r.slice(0, r.indexOf(":"));
