@@ -65,10 +65,10 @@ function validate( ports, port ) {
   for (var i = 0; i < ports.length; i++) {
     if ( ports[i].port == port ) {
       return { 'valid': true };
-    } 
+    }
   };
   return { 'valid': false, 'error': 'port not found' };
-} 
+}
 
 
 function genConfig(config) {
@@ -80,7 +80,7 @@ function genConfig(config) {
   serviceList.items.forEach( function( item ) {
     if ( item.metadata && item.metadata.annotations ) {
       Object.keys( item.metadata.annotations ).forEach( function( key ) {
-        if ( key.slice(0, prefix.length) === prefix ) { 
+        if ( key.slice(0, prefix.length) === prefix ) {
           var svc = item.metadata.name;
           var ip = item.spec.portalIP;
           var port = key.slice(prefix.length);
@@ -97,14 +97,14 @@ function genConfig(config) {
             } else if ( type == HOST_RULE ) {
               hostProxies.push( def );
             } else {
-              console.error('Invalid rule type (%s) when defining service %s and port %s', type, svc, port); 
+              console.error('Invalid rule type (%s) when defining service %s and port %s', type, svc, port);
             }
           } else {
             console.error('Error defining proxy for service %s and port %s: %s', svc, port, v.error);
-          } 
-        } 
+          }
+        }
       });
-    } 
+    }
   });
 
   pathProxies.push( { 'service': 'svc_gw', 'rule': '/svc_gw/', 'ip': 'localhost', 'port': mgr_port } );
@@ -145,7 +145,7 @@ function checkConfig(serviceJson) {
       });
     }
   });
-} 
+}
 
 function update() {
   http.get(url, function(response) {
