@@ -25,7 +25,7 @@ var prefix    = program.prefix   || process.env.SVC_GW_PREFIX       || "svcgatew
 var interval  = program.interval || process.env.SVC_GW_INTERVAL     || 60;
 var mgr_port  = program.listen   || process.env.SVC_GW_MGR_PORT     || 9090;
 
-var url       = "http://" + k8s_host + "/api/v1beta3/services";
+var url       = "http://" + k8s_host + "/api/v1/services";
 var conf_tmpl = hogan.compile(fs.readFileSync(path.resolve(__dirname) + '/nginx.conf.mustache').toString());
 
 var last_update_ts   = "";
