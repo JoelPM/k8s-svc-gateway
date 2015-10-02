@@ -25,7 +25,7 @@ var prefix    = program.prefix   || process.env.SVC_GW_PREFIX       || "svcgatew
 var interval  = program.interval || process.env.SVC_GW_INTERVAL     || 60;
 var mgr_port  = program.listen   || process.env.SVC_GW_MGR_PORT     || 9090;
 
-var url       = "http://" + k8s_host + "/api/v1beta3/services";
+var url       = "http://" + k8s_host + "/api/v1/services";
 var conf_tmpl = hogan.compile(fs.readFileSync(path.resolve(__dirname) + '/nginx.conf.mustache').toString());
 
 var last_update_ts   = "";
@@ -65,10 +65,10 @@ function validate( ports, port ) {
   for (var i = 0; i < ports.length; i++) {
     if ( ports[i].port == port ) {
       return { 'valid': true };
-    } 
+    }
   };
   return { 'valid': false, 'error': 'port not found' };
-} 
+}
 
 
 function genConfig(config) {
@@ -80,9 +80,9 @@ function genConfig(config) {
   serviceList.items.forEach( function( item ) {
     if ( item.metadata && item.metadata.annotations ) {
       Object.keys( item.metadata.annotations ).forEach( function( key ) {
-        if ( key.slice(0, prefix.length) === prefix ) { 
+        if ( key.slice(0, prefix.length) === prefix ) {
           var svc = item.metadata.name;
-          var ip = item.spec.portalIP;
+          var ip = item.spec.clusterIP;
           var port = key.slice(prefix.length);
           var r = item.metadata.annotations[key];
           var type = r.slice(0, r.indexOf(":"));
@@ -97,14 +97,14 @@ function genConfig(config) {
             } else if ( type == HOST_RULE ) {
               hostProxies.push( def );
             } else {
-              console.error('Invalid rule type (%s) when defining service %s and port %s', type, svc, port); 
+              console.error('Invalid rule type (%s) when defining service %s and port %s', type, svc, port);
             }
           } else {
             console.error('Error defining proxy for service %s and port %s: %s', svc, port, v.error);
-          } 
-        } 
+          }
+        }
       });
-    } 
+    }
   });
 
   pathProxies.push( { 'service': 'svc_gw', 'rule': '/svc_gw/', 'ip': 'localhost', 'port': mgr_port } );
@@ -145,14 +145,14 @@ function checkConfig(serviceJson) {
       });
     }
   });
-} 
+}
 
 function update() {
   http.get(url, function(response) {
     if (response.statusCode != 200) {
       last_update_ts = new Date();
       last_update_res = "Error making request to " + url + ": " + response.statusCode;
-      console.error("Error making request to %s: %s", URL, response.statusCode);
+      console.error("Error making request to %s: %s", url, response.statusCode);
       last_update_cfg = "";
     } else {
       var body = '';
