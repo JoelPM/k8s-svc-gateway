@@ -15,7 +15,9 @@ I'm sure there are _much_ better (and secure) ways of achieving this. For now it
          "name":"front-end"
       },
       "annotations": {
-        "svcgateway.80": "host:fe.example.com"
+        "svcgateway.80": "host:fe.example.com",
+        "err.svcgateway.80": true,
+        "cidr.80": "192.168.0.0/16"
       }
    },
    "spec":{
@@ -45,6 +47,9 @@ server {
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_pass http://{{ip}}:{{port}}/;
+
+      allow 192.168.0.0/16;
+      deny all;
     }
 
     # redirect server error pages to the static page /50x.html
@@ -63,6 +68,9 @@ The service gateway checks for updates every minute, though that's configurable 
 | ------------------- | -----------
 | SVC_GW_K8S_API_HOST | which kubernetes API to connect to. Defaults to $KUBERNETES_RO_SERVICE_HOST.
 | SVC_GW_PREFIX       | which annotation prefix to look for. Defaults to 'svcgateway'.
+| SVC_GW_ERR_PREFIX   | which annotation prefix to look for if error capturing should take effect. Default is "err.svcproxy."
+| SVC_GW_CIDR         | which annotation prefix to look for cidr block whitelisting. Default is "cidr."
+| SVC_GW_CIDR_DEFAULT | environmental variable setting default cidr block whitelisting
 | SVC_GW_INTERVAL     | interval in seconds on which to pull service list. Defaults to 60.
 | SVC_GW_MGR_PORT     | port the mgr app listens on. Defaults to 9090.
 

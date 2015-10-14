@@ -15,15 +15,21 @@ program
   .version('1.0.0')
   .option('-h, --host [host]',     'Kubernetes host to query. Env var $SVC_GW_K8S_API_HOST. Defaults to $KUBERNETES_RO_SERVICE_HOST.')
   .option('-p, --prefix [prefix]', 'Annotation prefix to use. Env var $SVC_GW_PREFIX. Default is "svcproxy."')
+  .option('-e, --err-prefix [err_prefix]', 'Annotation error prefix to use. Env var $SVC_GW_ERR_PREFIX. Default is "err.svcproxy."')
+  .option('-c, --cidr [cidr]', 'Annotation whitelist cidr block prefix to use. Env var $SVC_GW_CIDR. Default is "cidr."')
+  .option('-d, --default-cidr [default_cidr]', 'Default whitelist cidr block to use if specified. Env var $SVC_GW_CIDR_DEFAULT. Defaults to undefined.')
   .option('-i, --interval [val]',  'Interval on which to poll for new or removed services in seconds. Env var $SVC_GW_INTERVAL. Defaults to 60.')
   .option('-l, --listen [val]',    'Port on which built-in web interface should listen. Env var SVC_GW_MGR_PORT. Defaults to 9090.')
   .parse(process.argv);
 
 
-var k8s_host  = program.host     || process.env.SVC_GW_K8S_API_HOST || process.env.KUBERNETES_RO_SERVICE_HOST;
-var prefix    = program.prefix   || process.env.SVC_GW_PREFIX       || "svcgateway.";
-var interval  = program.interval || process.env.SVC_GW_INTERVAL     || 60;
-var mgr_port  = program.listen   || process.env.SVC_GW_MGR_PORT     || 9090;
+var k8s_host        = program.host          || process.env.SVC_GW_K8S_API_HOST  || process.env.KUBERNETES_RO_SERVICE_HOST;
+var prefix          = program.prefix        || process.env.SVC_GW_PREFIX        || "svcgateway.";
+var err_prefix      = program.err_prefix    || process.env.SVC_GW_ERR_PREFIX    || "err.svcgateway."
+var cidr_prefix     = program.cidr          || process.env.SVC_GW_CIDR          || "cidr."
+var cidr_default    = program.cidr          || process.env.SVC_GW_CIDR_DEFAULT  || undefined
+var interval        = program.interval      || process.env.SVC_GW_INTERVAL      || 60;
+var mgr_port        = program.listen        || process.env.SVC_GW_MGR_PORT      || 9090;
 
 var url       = "http://" + k8s_host + "/api/v1/services";
 var conf_tmpl = hogan.compile(fs.readFileSync(path.resolve(__dirname) + '/nginx.conf.mustache').toString());
@@ -87,11 +93,13 @@ function genConfig(config) {
           var r = item.metadata.annotations[key];
           var type = r.slice(0, r.indexOf(":"));
           var rule = r.slice(r.indexOf(":")+1);
+          var err = (err_prefix + port) in item.metadata.annotations ? item.metadata.annotations[err_prefix + port] : true
+          var cidr = (cidr_prefix + port) in item.metadata.annotations ? item.metadata.annotations[cidr_prefix + port] : cidr_default
 
 
           var v = validate( item.spec.ports, port );
           if (v.valid) {
-            var def = { 'service': svc, 'rule': rule, 'ip': ip, 'port': port };
+            var def = { 'service': svc, 'rule': rule, 'ip': ip, 'port': port, 'err': err, 'cidr': cidr };
             if ( type == PATH_RULE ) {
               pathProxies.push( def );
             } else if ( type == HOST_RULE ) {
