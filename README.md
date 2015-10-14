@@ -15,7 +15,9 @@ I'm sure there are _much_ better (and secure) ways of achieving this. For now it
          "name":"front-end"
       },
       "annotations": {
-        "svcgateway.80": "host:fe.example.com"
+        "svcgateway.80": "host:fe.example.com",
+        "err.svcgateway.80": false,
+        "cidr.80": "192.168.0.0/16"
       }
    },
    "spec":{
