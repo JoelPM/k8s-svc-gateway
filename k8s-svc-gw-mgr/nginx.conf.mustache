@@ -1,5 +1,5 @@
 server {
-    listen       80;
+    listen       {{exposed_path_port}};
     server_name  localhost;
 
     {{#path_proxies}}
@@ -8,10 +8,19 @@ server {
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_pass http://{{ip}}:{{port}}/;
+
+      {{#cidr}}
+      allow {{.}};
+      {{/cidr}}
+
+      {{#cidr.length}}
+      deny all;
+      {{/cidr.length}}
     }
 
     {{/path_proxies}}
 
+    {{#err}}
     #error_page  404              /404.html;
 
     # redirect server error pages to the static page /50x.html
@@ -19,12 +28,13 @@ server {
     location = /50x.html {
         root   /usr/share/nginx/html;
     }
+    {{/err}}
 }
 
 {{#host_proxies}}
 # {{service}} proxy
 server {
-    listen       80;
+    listen       {{exposed_port}};
     server_name  {{rule}};
 
     # {{service}} proxy
@@ -34,9 +44,12 @@ server {
       proxy_pass http://{{ip}}:{{port}}/;
 
       {{#cidr}}
-      allow {{cidr}};
-      deny all;
+      allow {{.}};
       {{/cidr}}
+
+      {{#cidr.length}}
+      deny all;
+      {{/cidr.length}}
     }
 
     {{#err}}
