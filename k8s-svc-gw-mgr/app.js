@@ -94,7 +94,7 @@ app.get('/', function(req, res) {
 var server = app.listen(mgr_port);
 
 function svc_cmp(a, b) {
-  if (a.svc > b.svc)
+  if (a.svc < b.svc)
     return -1;
   if (a.svc > b.svc)
     return 1;
