@@ -93,7 +93,7 @@ The service gateway checks for updates every minute, though that's configurable 
 
 | ENV Var                           | Description
 | --------------------------------- | -----------
-| SVC_GW_K8S_API_HOST               | which kubernetes API to connect to. Defaults to $KUBERNETES_RO_SERVICE_HOST.
+| SVC_GW_K8S_API_HOST               | which kubernetes API to connect to. Defaults to $KUBERNETES_SERVICE_HOST.
 | SVC_GW_PREFIX                     | which annotation prefix to look for. Defaults to 'svcgateway'.
 | SVC_GW_ERR_PREFIX                 | which annotation prefix to look for if error capturing should take effect. Default is "err.svcproxy."
 | SVC_GW_CIDR                       | which annotation prefix to look for cidr block whitelisting. Default is "cidr."
