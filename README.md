@@ -98,6 +98,15 @@ The service gateway checks for updates every minute, though that's configurable 
 | SVC_GW_ERR_PREFIX                 | which annotation prefix to look for if error capturing should take effect. Default is "err.svcproxy."
 | SVC_GW_CIDR                       | which annotation prefix to look for cidr block whitelisting. Default is "cidr."
 | SVC_GW_CIDR_DEFAULT               | environmental variable setting default cidr block whitelisting, comma separated list
+| SVC_GW_WEBSOCKET_PREFIX           | which annotation prefix to look for enabling websockets. Default is "websocket.". Set annotation value to "true" to enable.
+| SVC_GW_SSL_PREFIX                 | which annotation prefix to look for enabling SSL. Default is "ssl.". Set annotation value to "true" to enable.
+| SVC_GW_SSL_REDIRECT_PREFIX        | which annotation prefix to look for enabling HTTP to HTTPS redirection. Default is "ssl.redirect.". Set annotation value to "true" to enable.
+| SVC_GW_SSL_CERT_PREFIX            | which annotation prefix to look for setting SSL cert path. Default is "path.ssl.cert."
+| SVC_GW_DEFAULT_SSL_CERT_PATH      | default path to SSL cert for this host. Defaults to "etc/secrets/cert.crt".
+| SVC_GW_SSL_KEY_PREFIX             | which annotation prefix to look for setting SSL cert key path. Default is "path.ssl.cert."
+| SVC_GW_DEFAULT_SSL_KEY_PATH       | default path to SSL cert key for this host. Defaults to "etc/secrets/key.pem".
+| SVC_GW_SSL_DHPARM_PREFIX          | which annotation prefix to look for setting SSL DH params path. Default is "path.ssl.dhparam."
+| SVC_GW_DEFAULT_SSL_DHPARM_PATH    | default path to SSL DH params for this host. Defaults to "etc/secrets/dhparam".
 | SVC_GW_INTERVAL                   | interval in seconds on which to pull service list. Defaults to 60.
 | SVC_GW_MGR_PORT                   | port the mgr app listens on. Defaults to 9090.
 | SVC_GW_EXPOSED_HOST_PORT_PREFIX   | Annotation exposed host port prefix to use. Default is "port.svcproxy."
@@ -106,71 +115,83 @@ The service gateway checks for updates every minute, though that's configurable 
 
 To deploy this (only just barely tested in GKE), you would use a ReplicationController definition something like this:
 
-```json
-{
-   "kind":"ReplicationController",
-   "apiVersion":"v1beta3",
-   "metadata":{
-      "name":"k8s-svc-gw",
-      "labels":{
-         "name":"k8s-svc-gw",
-         "version": "0.0.0"
-      }
-   },
-   "spec":{
-      "replicas":3,
-      "selector":{
-         "name":"k8s-svc-gw"
-      },
-      "template":{
-         "metadata":{
-            "labels":{
-               "name":"k8s-svc-gw"
-            }
-         },
-         "spec":{
-            "containers":[
-               {
-                  "name":"k8s-svc-gw",
-                  "image":"joelpm/k8s-svc-gw:0.0.0",
-                  "ports":[
-                     {
-                        "containerPort": 80,
-                        "protocol": "TCP"
-                     }
-                  ]
-               }
-            ]
-         }
-      }
-   }
-}
+``` yaml
+  kind: ReplicationController
+  apiVersion: v1
+  metadata:
+    name: k8s-svc-gw
+    labels:
+      name: k8s-svc-gw
+  spec:
+    replicas: 1
+    selector:
+      name: k8s-svc-gw
+    template:
+      metadata:
+        labels:
+          name: k8s-svc-gw
+          version: "0.0.0"
+      spec:
+        volumes:
+          - name: ssl-proxy-secret
+            secret:
+              secretName: ssl-proxy-secret
+        containers:
+          - image: joelpm/k8s-svc-gw:0.0.0
+            name: k8s-svc-gw
+            volumeMounts:
+            - name: ssl-proxy-secret
+              mountPath: "/etc/secrets"
+              readOnly: true
+            ports:
+              - name: proxy-http
+                containerPort: 80
+                protocol: TCP
+              - name: proxy-https
+                containerPort: 443
+                protocol: TCP
 ```
 
 And a service definition like:
 
-```json
-{
-   "kind":"Service",
-   "apiVersion":"v1beta3",
-   "metadata":{
-      "name":"k8s-svc-gw",
-      "labels":{
-         "name":"k8s-svc-gw"
-      }
-   },
-   "spec":{
-      "ports": [
-        {
-          "port":80,
-          "targetPort":80,
-          "protocol":"TCP"
-        }
-      ],
-      "selector":{
-         "name":"k8s-svc-gw"
-      },
-      "createExternalLoadBalancer": true
-   }
-}
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: k8s-svc-gw
+  name: k8s-svc-gw
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: proxy-http
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: proxy-https
+      protocol: TCP
+  selector:
+    name: k8s-svc-gw
+```
+
+And if using SSL, a [Secrets](http://kubernetes.io/v1.1/docs/user-guide/secrets.html) definition like this:
+
+```yaml
+apiVersion: "v1"
+kind: "Secret"
+metadata:
+  name: "ssl-proxy-secret"
+  namespace: "default"
+data:
+  "cert.crt": "..."
+  "key.pem": "..."
+  dhparam: "..."
+```
+
+The data files should be converted into Base-64 using:
+
+```
+$ cat cert.crt | base64
 ```

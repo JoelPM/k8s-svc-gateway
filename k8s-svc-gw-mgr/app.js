@@ -29,6 +29,33 @@ program.version('1.0.0')
          '-d, --default-cidr [default_cidr]',
          'Default whitelist cidr block to use if specified. Env var $SVC_GW_CIDR_DEFAULT. Defaults to undefined.')
     .option(
+         '-W, --websocket-enabled [websocket]',
+         'Annotation websocket enabled prefix to use. Env var $SVC_GW_SSL_PREFIX. Default is "websocket."')
+    .option(
+         '-S, --ssl-enabled [ssl]',
+         'Annotation SSL enabled prefix to use. Env var $SVC_GW_SSL_PREFIX. Default is "ssl."')
+    .option(
+         '-R, --ssl-redirect [ssl_redirect]',
+         'Annotation SSL redirect prefix to use. Env var $SVC_GW_SSL_PREFIX. Default is "ssl.redirect."')
+    .option(
+         '-C, --ssl-cert [ssl_cert]',
+         'Annotation SSL cert prefix to use. Env var $SVC_GW_SSL_CERT_PREFIX. Default is "path.ssl.cert."')
+    .option(
+         '-D, --default-ssl-cert-path [default_ssl_cert_path]',
+         'Default SSL cert path to use if specified. Env var $SVC_GW_SSL_CERT_DEFAULT. Defaults to "/etc/secrets/cert.crt".')
+    .option(
+         '-k, --ssl-key [ssl_key]',
+         'Annotation SSL key prefix to use. Env var $SVC_GW_SSL_KEY_PREFIX. Default is "path.ssl.key."')
+    .option(
+         '-K, --default-ssl-key-path [default_ssl_key_path]',
+         'Default SSL key path to use if specified. Env var $SVC_GW_SSL_KEY_DEFAULT. Defaults to "/etc/secrets/key.pem".')
+    .option(
+         '-h, --ssl-dhparam [dhparam]',
+         'Annotation SSL dhparam prefix to use. Env var $SVC_GW_SSL_DHPARAM_PREFIX. Default is "path.ssl.dhparam."')
+    .option(
+         '-H, --default-ssl-dhparam-path [default_ssl_dhparam_path]',
+         'Default SSL dhparam path to use if specified. Env var $SVC_GW_DHPARAM_KEY_DEFAULT. Defaults to "/etc/secrets/dhparam".')
+    .option(
          '-i, --interval [val]',
          'Interval on which to poll for new or removed services in seconds. Env var $SVC_GW_INTERVAL. Defaults to 60.')
     .option(
@@ -62,6 +89,18 @@ var default_host_port =
 var exposed_host_port_prefix = program.exposed_host_port_prefix ||
                                process.env.SVC_GW_EXPOSED_HOST_PORT_PREFIX ||
                                "port.svcproxy.";
+var websocket_prefix = program.websocket || process.env.SVC_GW_WEBSOCKET_PREFIX || "websocket.";
+var ssl_prefix = program.ssl || process.env.SVC_GW_SSL_PREFIX || "ssl.";
+var ssl_redirect_prefix = program.ssl_redirect || process.env.SVC_GW_SSL_REDIRECT_PREFIX || "ssl.redirect.";
+var ssl_cert_prefix = program.ssl_cert || process.env.SVC_GW_SSL_CERT_PREFIX || "path.ssl.cert.";
+var default_ssl_cert_path =
+    program.default_ssl_cert_path || process.env.SVC_GW_DEFAULT_SSL_CERT_PATH || "/etc/secrets/cert.crt";
+var ssl_key_prefix = program.ssl_key || process.env.SVC_GW_SSL_KEY_PREFIX || "path.ssl.key.";
+var default_ssl_key_path =
+    program.default_ssl_key_path || process.env.SVC_GW_DEFAULT_SSL_KEY_PATH || "/etc/secrets/key.pem";
+var ssl_dhparam_prefix = program.ssl_dhparam || process.env.SVC_GW_SSL_DHPARM_PREFIX || "path.ssl.dhparam.";
+var default_ssl_dhparam_path =
+    program.default_ssl_dhparam_path || process.env.SVC_GW_DEFAULT_SSL_DHPARAM_PATH || "/etc/secrets/dhparam";
 
 var cidr_default =
     (typeof(cidr_default_str) === "undefined" ? undefined
@@ -142,6 +181,22 @@ function genConfig(config) {
                       ? item.metadata
                             .annotations[exposed_host_port_prefix + port]
                       : default_host_port;
+              var ssl = item.metadata.annotations[ssl_prefix + port] === "true" ?
+                            true : undefined;
+              var ssl_redirect = item.metadata.annotations[ssl_redirect_prefix + port] === "true" ?
+                            true : undefined;
+              var ssl_cert = (ssl_cert_prefix + port) in item.metadata.annotations
+                            ? item.metadata.annotations[ssl_cert_prefix + port]
+                            : default_ssl_cert_path;
+              var ssl_cert_key = (ssl_key_prefix + port) in item.metadata.annotations
+                            ? item.metadata.annotations[ssl_key_prefix + port]
+                            : default_ssl_key_path;
+              var ssl_dhparam = (ssl_dhparam_prefix + port) in item.metadata.annotations
+                            ? item.metadata.annotations[ssl_dhparam_prefix + port]
+                            : default_ssl_dhparam_path;
+              var websocket = item.metadata.annotations[websocket_prefix + port] === "true" ?
+                            true : undefined;
+
 
               var v = validate(item.spec.ports, port);
               if (v.valid) {
@@ -152,7 +207,13 @@ function genConfig(config) {
                   'port' : port,
                   'err' : err,
                   'cidr' : cidr,
-                  'exposed_port' : exposed_port
+                  'exposed_port' : exposed_port,
+                  'ssl': ssl,
+                  'ssl_redirect': ssl_redirect,
+                  'ssl_cert': ssl_cert,
+                  'ssl_cert_key': ssl_cert_key,
+                  'ssl_dhparam': ssl_dhparam,
+                  'websocket': websocket
                 };
                 if (type == PATH_RULE) {
                   pathProxies.push(def);
