@@ -4,7 +4,8 @@ var exec = require('child_process').exec;
 var express = require('express');
 var fs = require('fs');
 var hogan = require('hogan.js');
-var http = require('http');
+var https = require('https');
+var url = require('url');
 var path = require('path');
 var program = require('commander');
 
@@ -14,7 +15,7 @@ var HOST_RULE = "host";
 program.version('1.0.0')
     .option(
          '-h, --host [host]',
-         'Kubernetes host to query. Env var $SVC_GW_K8S_API_HOST. Defaults to $KUBERNETES_RO_SERVICE_HOST.')
+         'Kubernetes host to query. Env var $SVC_GW_K8S_API_HOST. Defaults to $KUBERNETES_SERVICE_HOST.')
     .option(
          '-p, --prefix [prefix]',
          'Annotation prefix to use. Env var $SVC_GW_PREFIX. Default is "svcproxy."')
@@ -45,7 +46,7 @@ program.version('1.0.0')
     .parse(process.argv);
 
 var k8s_host = program.host || process.env.SVC_GW_K8S_API_HOST ||
-               process.env.KUBERNETES_RO_SERVICE_HOST;
+               process.env.KUBERNETES_SERVICE_HOST;
 var prefix = program.prefix || process.env.SVC_GW_PREFIX || "svcgateway.";
 var err_prefix =
     program.err_prefix || process.env.SVC_GW_ERR_PREFIX || "err.svcgateway.";
@@ -66,7 +67,9 @@ var cidr_default =
     (typeof(cidr_default_str) === "undefined" ? undefined
                                               : cidr_default_str.split(","));
 
-var url = "http://" + k8s_host + "/api/v1/services";
+var root_url = "https://" + k8s_host + "/api/v1/services";
+var k8s_token = fs.readFileSync("/var/run/secrets/kubernetes.io/serviceaccount/token").toString();
+var k8s_ca_cert = fs.readFileSync("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt").toString();
 var conf_tmpl =
     hogan.compile(fs.readFileSync(path.resolve(__dirname) +
                                   '/nginx.conf.mustache').toString());
@@ -82,7 +85,7 @@ app.get('/', function(req, res) {
     'prefix' : prefix,
     'interval' : interval,
     'mgr_port' : mgr_port,
-    'url' : url,
+    'url' : root_url,
     'last_update_ts' : last_update_ts,
     'last_update_res' : last_update_res,
     'last_update_cfg' : last_update_cfg
@@ -222,12 +225,19 @@ function checkConfig(serviceJson) {
 }
 
 function update() {
-  http.get(url, function(response) {
+  var req_obj = url.parse(root_url);
+  req_obj.headers = {
+    "Authorization": "Bearer " + k8s_token
+  };
+
+  req_obj.ca = k8s_ca_cert;
+
+  https.get(req_obj, function(response) {
     if (response.statusCode != 200) {
       last_update_ts = new Date();
       last_update_res =
-          "Error making request to " + url + ": " + response.statusCode;
-      console.error("Error making request to %s: %s", url, response.statusCode);
+          "Error making request to " + root_url + ": " + response.statusCode;
+      console.error("Error making request to %s: %s", root_url, response.statusCode);
       last_update_cfg = "";
     } else {
       var body = '';
