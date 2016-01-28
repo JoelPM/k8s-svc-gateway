@@ -14,8 +14,10 @@ COPY nginx.sh /etc/service/nginx/run
 
 # Add the manager nodejs app
 RUN mkdir /opt/k8s-svc-gw-mgr/
-COPY k8s-svc-gw-mgr /opt/k8s-svc-gw-mgr/
+COPY k8s-svc-gw-mgr/package.json /opt/k8s-svc-gw-mgr/
 RUN cd /opt/k8s-svc-gw-mgr && npm install
+COPY k8s-svc-gw-mgr /opt/k8s-svc-gw-mgr/
+
 
 # Add the runit script for the mgr app
 RUN mkdir /etc/service/k8s-svc-gw-mgr
